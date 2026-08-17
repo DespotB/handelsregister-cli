@@ -1,0 +1,13 @@
+{
+  "name": "handelsregister",
+  "version": "0.1.0",
+  "description": "Search the German commercial register (Handelsregister) and download registry documents — Gesellschafterliste, Gesellschaftsvertrag, printouts (AD/CD/HD), structured XML (SI) — via the bundled hreg CLI.",
+  "author": {
+    "name": "Despot Bitschnau",
+    "url": "https://github.com/DespotB"
+  },
+  "homepage": "https://github.com/DespotB/handelsregister-cli",
+  "repository": "https://github.com/DespotB/handelsregister-cli",
+  "license": "MIT",
+  "keywords": ["handelsregister", "gesellschafterliste", "germany", "company-registry"]
+}

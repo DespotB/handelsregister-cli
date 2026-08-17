@@ -1,0 +1,14 @@
+{
+  "name": "handelsregister-cli",
+  "owner": {
+    "name": "Despot Bitschnau",
+    "url": "https://github.com/DespotB"
+  },
+  "plugins": [
+    {
+      "name": "handelsregister",
+      "source": "./",
+      "description": "Search the German commercial register and download all registry documents (Gesellschafterliste, Gesellschaftsvertrag, AD/CD/HD/SI) for a company."
+    }
+  ]
+}
