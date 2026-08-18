@@ -1,0 +1,6 @@
+{
+  "name": "handelsregister",
+  "version": "0.1.0",
+  "description": "Search the German commercial register (Handelsregister) and download registry documents (Gesellschafterliste, Gesellschaftsvertrag, AD/CD/HD/SI) via the hreg CLI.",
+  "contextFileName": "GEMINI.md"
+}

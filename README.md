@@ -152,6 +152,30 @@ The repo doubles as a Claude Code plugin marketplace. Inside Claude Code:
 Then ask for e.g. `/handelsregister arcneo GmbH` — the skill installs the CLI on
 first use (pipx), runs the fetch and reports the downloaded files.
 
+## Codex CLI (Agent Skills)
+
+Codex supports the same open [Agent Skills](https://learn.chatgpt.com/docs/build-skills)
+format (`SKILL.md`), so the bundled skill works there too — copy it into your
+skills directory:
+
+```bash
+git clone https://github.com/DespotB/handelsregister-cli /tmp/hrcli
+mkdir -p ~/.codex/skills
+cp -r /tmp/hrcli/skills/handelsregister ~/.codex/skills/
+```
+
+Then ask Codex for registry documents in natural language (skills support is
+experimental in Codex; enable it in your Codex config if needed).
+
+## Gemini CLI (extension)
+
+The repo is also a Gemini CLI extension (`gemini-extension.json` + a
+`/handelsregister` command):
+
+```bash
+gemini extensions install https://github.com/DespotB/handelsregister-cli
+```
+
 ## Development
 
 ```bash
