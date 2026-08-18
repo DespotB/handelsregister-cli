@@ -10,10 +10,15 @@ using the `hreg` CLI (from the same repository as this plugin).
 
 ## Steps
 
-1. **Ensure the CLI is available.** Run `hreg --version`. If missing, install it:
-   `pipx install git+https://github.com/DespotB/handelsregister-cli`
-   (fall back to `pip install --user ...` if pipx is unavailable). If both fail,
-   tell the user what to install and stop.
+1. **Ensure the CLI is available.** Run `hreg --version`. If missing, install it
+   with the first of these tools that exists on the machine:
+   - `uv tool install git+https://github.com/DespotB/handelsregister-cli`
+   - `pipx install git+https://github.com/DespotB/handelsregister-cli`
+   - `pip install --user git+https://github.com/DespotB/handelsregister-cli`
+
+   If `hreg` is still not found afterwards, the install bin directory is likely
+   not on PATH — try `~/.local/bin/hreg --version` and call it by that path.
+   If all installers fail, tell the user what to install and stop.
 
 2. **Search first, never guess.** Run:
    `hreg search "<company keywords>" --json`

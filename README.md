@@ -48,11 +48,16 @@ No accounts, no API keys, no fees — the register is free by law
 ## Install
 
 ```bash
-pipx install git+https://github.com/DespotB/handelsregister-cli
+uv tool install git+https://github.com/DespotB/handelsregister-cli
+# or: pipx install git+https://github.com/DespotB/handelsregister-cli
 # or: pip install git+https://github.com/DespotB/handelsregister-cli
 ```
 
 Python ≥ 3.9. Dependencies: `mechanize`, `beautifulsoup4`.
+
+**AI agents / coding assistants:** see [AGENTS.md](AGENTS.md) for a
+self-contained install-and-use recipe (Claude Code users can install the
+[plugin](#claude-code-plugin) instead).
 
 ## CLI usage
 
@@ -150,7 +155,8 @@ The repo doubles as a Claude Code plugin marketplace. Inside Claude Code:
 ```
 
 Then ask for e.g. `/handelsregister arcneo GmbH` — the skill installs the CLI on
-first use (pipx), runs the fetch and reports the downloaded files.
+first use (uv/pipx/pip, whichever is available), runs the fetch and reports the
+downloaded files.
 
 ## Codex CLI (Agent Skills)
 

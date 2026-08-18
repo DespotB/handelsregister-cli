@@ -6,8 +6,11 @@ registry documents for German companies from handelsregister.de.
 ## Rules
 
 1. Ensure the CLI is available: run `hreg --version`. If missing, install with
-   `pipx install git+https://github.com/DespotB/handelsregister-cli`
-   (fallback: `pip install --user ...`). If both fail, tell the user and stop.
+   the first available tool — `uv tool install`, `pipx install`, or
+   `pip install --user` — each with
+   `git+https://github.com/DespotB/handelsregister-cli`. If `hreg` is still
+   not found, the install bin dir is likely not on PATH: try
+   `~/.local/bin/hreg`. If all fail, tell the user and stop.
 2. Always search before fetching: `hreg search "<keywords>" --json`.
    If several plausible companies match, ask which one is meant unless the
    user already provided a register number.

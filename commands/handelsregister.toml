@@ -4,7 +4,7 @@ prompt = """
 Fetch the official German commercial register documents for: {{args}}
 
 Follow the rules in the handelsregister extension context (GEMINI.md):
-verify the hreg CLI is installed (install via pipx if missing), run
+verify the hreg CLI is installed (install via uv/pipx/pip if missing), run
 `hreg search "{{args}}" --json` first, confirm the company if ambiguous,
 then `hreg fetch` with default delays, and summarise the downloaded files
 from manifest.json.
