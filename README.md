@@ -1,5 +1,7 @@
 # handelsregister-cli
 
+[![CI](https://github.com/DespotB/handelsregister-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/DespotB/handelsregister-cli/actions/workflows/ci.yml)
+
 **Search the German commercial register (Handelsregister) and download all registry
 documents — including the Gesellschafterliste (shareholder list) and
 Gesellschaftsvertrag (articles of association) — from the command line or from Python.**
