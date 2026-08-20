@@ -2,21 +2,27 @@
 
 Subcommands:
 
-* ``hreg search "term"``  — list matching companies
-* ``hreg tree "term"``    — show the DK document tree without downloading
-* ``hreg fetch "term"``   — download registry documents (default: everything)
+* ``hreg search "term"``        — list matching companies
+* ``hreg tree "term"``          — show the DK document tree without downloading
+* ``hreg fetch "term"``         — download registry documents (default: everything)
+* ``hreg announcements``        — date-based Registerbekanntmachungen search
+* ``hreg watch``                — cron-friendly diff run: report only new announcements / search hits
 """
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
 import json
+import subprocess
 import sys
 from pathlib import Path
 
 from . import __version__
+from .announcements import CATEGORIES, LAND_CODES, AnnouncementsPortal, matches_keywords
 from .files import FileSink, clean_label, looks_like_document
 from .models import CompanyHit
 from .portal import DIRECT_LABELS, Portal, PortalError
+from .watch import WatchState
 
 DIRECT_NAMES = {
     "AD": "Aktueller Ausdruck (AD)",
@@ -137,6 +143,114 @@ def cmd_fetch(args) -> None:
         print(f"{len(downloads)} files -> {outdir}/ (deduplicated; see manifest.json)")
 
 
+def normalize_date(value: str) -> str:
+    """Accept ``DD.MM.YYYY`` or ``YYYY-MM-DD``; return the portal's ``DD.MM.YYYY``."""
+    for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
+        try:
+            return _dt.datetime.strptime(value, fmt).replace(
+                tzinfo=_dt.timezone.utc
+            ).strftime("%d.%m.%Y")
+        except ValueError:
+            continue
+    raise ValueError(f"not a date: {value!r} (use DD.MM.YYYY or YYYY-MM-DD)")
+
+
+def _resolve_category(value: str) -> str:
+    """Map a category argument (number or name fragment) to the portal value."""
+    if value in CATEGORIES:
+        return value
+    matches = [k for k, v in CATEGORIES.items() if value.lower() in v.lower()]
+    if len(matches) != 1:
+        opts = ", ".join(f"{k}={v}" for k, v in CATEGORIES.items())
+        sys.exit(f"--category {value!r} is ambiguous or unknown; use one of: {opts}")
+    return matches[0]
+
+
+def _announcement_dates(args) -> tuple:
+    today = _dt.datetime.now(tz=_dt.timezone.utc).astimezone().date()
+    if args.days is not None:
+        return (today - _dt.timedelta(days=args.days)).strftime("%d.%m.%Y"), today.strftime("%d.%m.%Y")
+    date_to = normalize_date(args.to) if args.to else today.strftime("%d.%m.%Y")
+    date_from = normalize_date(getattr(args, "from")) if getattr(args, "from") else date_to
+    return date_from, date_to
+
+
+def _run_announcements_search(args) -> tuple:
+    date_from, date_to = _announcement_dates(args)
+    if args.land and args.land.upper() not in LAND_CODES:
+        sys.exit(f"--land {args.land!r} unknown; use one of: {', '.join(sorted(LAND_CODES))}")
+    portal = AnnouncementsPortal(delay=args.delay)
+    anns = portal.search(
+        date_from,
+        date_to,
+        land=args.land.upper() if args.land else "",
+        court=args.court or "",
+        seat=args.sitz or "",
+        category=_resolve_category(args.category) if args.category else "",
+    )
+    anns = [a for a in anns if matches_keywords(a, args.keyword or [])]
+    return portal, anns
+
+
+def cmd_announcements(args) -> None:
+    portal, anns = _run_announcements_search(args)
+    if args.details:
+        for ann in anns:
+            portal.fetch_detail(ann)
+    if args.json:
+        print(json.dumps([a.as_dict() for a in anns], ensure_ascii=False, indent=2))
+        return
+    for ann in anns:
+        print(f"{ann.date}  {ann.category}")
+        print(f"    {ann.state} {ann.court} {ann.register_num or ''}".rstrip())
+        print(f"    {ann.name} – {ann.seat}")
+        if ann.detail and ann.detail.get("text"):
+            print(f"    {ann.detail['text'][:300]}")
+        print()
+    print(f"{len(anns)} announcements", file=sys.stderr)
+
+
+def _notify(cmd: str, payload: dict) -> None:
+    subprocess.run(
+        cmd, shell=True, input=json.dumps(payload, ensure_ascii=False), text=True, check=False
+    )
+
+
+def cmd_watch(args) -> None:
+    state = WatchState(Path(args.state).expanduser())
+    news = []
+
+    portal, anns = _run_announcements_search(args)
+    for ann in state.new_announcements(anns):
+        if args.details:
+            portal.fetch_detail(ann)
+        news.append({"type": "announcement", **ann.as_dict()})
+
+    for query in args.search or []:
+        hits = Portal(query, mode="all", delay=args.delay).search()
+        keyed = [
+            (f"{h.court}|{h.register_num or h.name}", h.as_dict())
+            for h in hits
+        ]
+        for _, payload in state.new_search_hits(query, keyed):
+            news.append({"type": "search", "query": query, **payload})
+
+    state.save()
+
+    for item in news:
+        if args.notify_cmd:
+            _notify(args.notify_cmd, item)
+    if args.json:
+        print(json.dumps(news, ensure_ascii=False, indent=2))
+    else:
+        for item in news:
+            if item["type"] == "announcement":
+                print(f"NEW {item['date']} {item['category']}: {item['name']} – {item['seat']} ({item['register_num']})")
+            else:
+                print(f"NEW result for {item['query']!r}: {item['name']} ({item['register_num']})")
+        print(f"{len(news)} new items", file=sys.stderr)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hreg",
@@ -192,6 +306,44 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_fetch.add_argument("-o", "--out", help="output directory (default: ./<company name>/)")
     p_fetch.set_defaults(func=cmd_fetch)
+
+    def announcement_args(p):
+        p.add_argument("--from", dest="from", metavar="DATE", default=None,
+                       help="start date (DD.MM.YYYY or YYYY-MM-DD; default: --to)")
+        p.add_argument("--to", default=None, help="end date (default: today)")
+        p.add_argument("--days", type=int, default=None,
+                       help="shortcut: last N days up to today (overrides --from/--to)")
+        p.add_argument("--land", help="Bundesland code, e.g. BE, BY, NW")
+        p.add_argument("--court", help='register court, e.g. "Berlin (Charlottenburg)"')
+        p.add_argument("--sitz", help="seat of the company")
+        p.add_argument("--category", help="1=Löschungsankündigung 2=UmwG 3=neue Dokumente 4=Sonstige 5=Sonderregister (number or name fragment)")
+        p.add_argument("--keyword", action="append",
+                       help="only announcements containing this keyword (repeatable, OR-matched)")
+        p.add_argument("--details", action="store_true",
+                       help="also fetch the full announcement text (one extra request each)")
+        p.add_argument("--delay", type=float, default=3.0,
+                       help="seconds to sleep between requests (default: 3; be polite)")
+        p.add_argument("--json", action="store_true", help="machine-readable output")
+
+    p_ann = sub.add_parser(
+        "announcements",
+        help="search Registerbekanntmachungen by date (Löschungsankündigungen, UmwG, neue Dokumente, …)",
+    )
+    announcement_args(p_ann)
+    p_ann.set_defaults(func=cmd_announcements)
+
+    p_watch = sub.add_parser(
+        "watch",
+        help="cron-friendly diff run: report only announcements/search results not seen before",
+    )
+    announcement_args(p_watch)
+    p_watch.add_argument("--state", default="~/.hreg-watch.json",
+                         help="state file with seen items (default: ~/.hreg-watch.json)")
+    p_watch.add_argument("--search", action="append", metavar="QUERY",
+                         help="also watch a normal register search for new companies (repeatable)")
+    p_watch.add_argument("--notify-cmd", metavar="CMD",
+                         help="shell command run once per new item, item JSON on stdin")
+    p_watch.set_defaults(func=cmd_watch)
     return parser
 
 

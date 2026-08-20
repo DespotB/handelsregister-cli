@@ -86,6 +86,44 @@ Useful flags: `--mode exact|all|any` (keyword matching), `--select N` /
 `--register "HRB …"` (pick a result row), `--delay SECONDS` (default 3, see
 [Rate limits](#rate-limits-and-fair-use)).
 
+### Registerbekanntmachungen and watch mode
+
+The portal's only date-based feed is its **Registerbekanntmachungen** section.
+Note what it is — and what it is not: since the DiRUG reform (Aug 2022) new
+company registrations are **no longer published as announcements anywhere**;
+the feed carries five categories: Löschungsankündigungen, announcements under
+the Umwandlungsgesetz (mergers etc.), new document filings, and two "other"
+buckets. `hreg` automates that search plus a diff-based watch mode:
+
+```bash
+# Everything announced today in Berlin
+hreg announcements --land BE
+
+# Last 7 days, nationwide, only mergers/conversions, machine-readable
+hreg announcements --days 7 --category umwandlung --json
+
+# Keyword filter (OR-matched against name, seat, category, court, register no.)
+# --details additionally fetches the full announcement text (1 extra request each)
+hreg announcements --days 3 --keyword holding --keyword immobilien --details
+
+# Cron-friendly watcher: prints only items not seen on a previous run.
+# Also watches a normal register search — new register numbers matching a
+# name keyword are the closest free approximation of "newly registered
+# companies named/branded X". First run only seeds the state file.
+hreg watch --days 3 --land BE --keyword holding \
+    --search "fintech" --search "holding" \
+    --state ~/.hreg-watch.json \
+    --notify-cmd 'jq -r .name | xargs -I{} notify-send "Handelsregister" {}'
+```
+
+`--notify-cmd` runs once per new item with the item's JSON on stdin — pipe it
+into mail, Slack, ntfy, or whatever you like. A crontab line makes it a
+notification service:
+
+```cron
+0 9 * * *  hreg watch --days 3 --land BE --search "solar" --notify-cmd '...'
+```
+
 ## Library usage
 
 ```python
@@ -144,6 +182,10 @@ please open an issue with the failing command and Python version.
 - `UT` (Unternehmensträgerdaten) and `VÖ` (Veröffentlichungen) are HTML views,
   not files, and are currently not fetched.
 - One company per invocation, by design.
+- There is **no feed of new company registrations**: the advanced search has no
+  date filter, and since DiRUG (Aug 2022) Neueintragungen are not announced
+  anywhere. `hreg watch --search` (diffing a keyword search) is the closest
+  free approximation; for a real feed use a commercial provider.
 
 ## Claude Code plugin
 

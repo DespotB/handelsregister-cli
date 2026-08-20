@@ -56,3 +56,34 @@ class Download:
             "sha256": self.sha256,
             "source": self.source,
         }
+
+
+@dataclass
+class Announcement:
+    """One Registerbekanntmachung from the portal's announcements search."""
+
+    id: str  # portal-internal announcement id, e.g. "167692"
+    date: str  # Bekanntmachungsdatum, "20.08.2026"
+    js_date: str  # raw date string the portal's JS passes along, needed for detail fetch
+    category: str  # e.g. "Löschungsankündigung"
+    state: str  # Bundesland, e.g. "Bayern"
+    court: str  # e.g. "Amtsgericht München"
+    register_num: str | None  # e.g. "HRB 242458"
+    name: str
+    seat: str
+    detail: dict | None = None  # filled by AnnouncementsPortal.fetch_detail()
+
+    def as_dict(self) -> dict:
+        d = {
+            "id": self.id,
+            "date": self.date,
+            "category": self.category,
+            "state": self.state,
+            "court": self.court,
+            "register_num": self.register_num,
+            "name": self.name,
+            "seat": self.seat,
+        }
+        if self.detail:
+            d["detail"] = self.detail
+        return d

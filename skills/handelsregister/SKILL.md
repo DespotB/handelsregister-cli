@@ -1,6 +1,6 @@
 ---
 name: handelsregister
-description: Search the German commercial register (Handelsregister) and download registry documents for a company — Gesellschafterliste (shareholder list), Gesellschaftsvertrag (articles of association), current/chronological printouts (AD/CD), structured XML (SI). Use when the user asks for a Handelsregisterauszug, Gesellschafterliste, registry documents, or company data from handelsregister.de. Invoked as /handelsregister <company name>.
+description: Search the German commercial register (Handelsregister), download registry documents for a company — Gesellschafterliste (shareholder list), Gesellschaftsvertrag (articles of association), current/chronological printouts (AD/CD), structured XML (SI) — and query date-based Registerbekanntmachungen (Löschungsankündigungen, UmwG announcements, new filings). Use when the user asks for a Handelsregisterauszug, Gesellschafterliste, registry documents, company data from handelsregister.de, or recent register announcements. Invoked as /handelsregister <company name>.
 ---
 
 # Handelsregister document fetch
@@ -39,6 +39,19 @@ using the `hreg` CLI (from the same repository as this plugin).
    which documents were downloaded (highlight Gesellschafterlisten and
    Gesellschaftsverträge with their dates), what was skipped and why, and where
    the files are. Mention that duplicates were removed by checksum.
+
+## Announcements and watching
+
+- For "what was announced recently" questions use
+  `hreg announcements --days N [--land BE] [--category …] [--keyword …] --json`.
+  Categories: Löschungsankündigung, UmwG announcements, new document filings,
+  and two "other" buckets. `--details` adds the full text (one extra request
+  per item — keep the result set small first).
+- **There is no feed of newly registered companies** — since the DiRUG reform
+  (Aug 2022) Neueintragungen are not announced anywhere. Say so instead of
+  improvising. The closest free approximation is
+  `hreg watch --search "<name keyword>"` on a schedule, which reports register
+  numbers not seen on a previous run (first run only seeds its state file).
 
 ## Notes
 
